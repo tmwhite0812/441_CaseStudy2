@@ -1,3 +1,5 @@
+%%Tyler and Keeler Case Study 2
+
 %% Glucose-Insulin Dynamics Simulation (Nonlinear and Linearized)
 clear; clc;
 
