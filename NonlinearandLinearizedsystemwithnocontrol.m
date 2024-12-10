@@ -1,5 +1,5 @@
 %% Glucose-Insulin Dynamics Simulation (Nonlinear and Linearized)
-clear; clc; close all;
+clear; clc;
 
 %% Parameters (Nominal)
 p1 = 0.03;   % 1/min
@@ -13,17 +13,13 @@ Ib = 10;     % mU/L
 tfinal = 1440;   % minutes
 tspan = [0 tfinal];
 
-% Basal insulin delivery u(t). For simplicity, let's assume constant basal insulin input:
-u_basal = n*Ib;  % This keeps insulin at Ib in steady state if no other disturbances.
+u_basal = n*Ib;  % Used in the linearized system  = 1
 
-% Define the nonlinear model as a function handle for ODE45
-% State vector: x = [G; X; I]
-% D(t): meal disturbance function defined below
 % u(t) = u_basal (constant)
 ode_nonlinear = @(t,x) nonlinear_ode(t,x,p1,p2,p3,n,Gb,Ib,u_basal);
 
 % Solve the nonlinear system
-x0 = [Gb; 0; Ib];  % initial conditions at equilibrium
+x0 = [0; 0; 0];  % initial conditions at equilibrium
 [tnl, xnl] = ode45(ode_nonlinear, tspan, x0);
 
 % Extract nonlinear results
@@ -39,8 +35,8 @@ A_lin = [ -p1,     -Gb,     0;
 
 E_d = [1; 0; 0]; 
 
-x0_lin = [0;0;0];  % deviation from equilibrium
-ode_linear = @(t,x) A_lin*x + E_d*D_meal(t);
+x0_lin = [Gb; 0; Ib];  % deviation from equilibrium
+ode_linear = @(t,x) A_lin*x + E_d;
 
 [tlin, xlin] = ode45(ode_linear, tspan, x0_lin);
 
@@ -51,65 +47,49 @@ I_lin = xlin(:,3) + Ib;
 
 %% Plot Results
 figure;
-
-% Left column: Nonlinear
-subplot(3,2,1)
+subplot(3,1,1)
 plot(tnl, G_nl, 'b','LineWidth',2);
 xlabel('Time (min)'); ylabel('Glucose (mg/dL)');
 title('Nonlinear Glucose Response');
 
-subplot(3,2,3)
+subplot(3,1,2)
 plot(tnl, X_nl, 'b','LineWidth',2);
 xlabel('Time (min)'); ylabel('X (1/min)');
 title('Nonlinear Insulin Action');
 
-subplot(3,2,5)
+subplot(3,1,3)
 plot(tnl, I_nl, 'b','LineWidth',2);
 xlabel('Time (min)'); ylabel('Insulin (mU/L)');
 title('Nonlinear Insulin Concentration');
+sgtitle("Nonlinear Dynamics of Autonomous System"); 
 
-% Right column: Linearized
-subplot(3,2,2)
+figure; 
+subplot(3,1,1)
 plot(tlin, G_lin, 'r--','LineWidth',2);
 xlabel('Time (min)'); ylabel('Glucose (mg/dL)');
 title('Linearized Glucose Response');
 
-subplot(3,2,4)
+subplot(3,1,2)
 plot(tlin, X_lin, 'r--','LineWidth',2);
 xlabel('Time (min)'); ylabel('X (1/min)');
 title('Linearized Insulin Action');
 
-subplot(3,2,6)
+subplot(3,1,3)
 plot(tlin, I_lin, 'r--','LineWidth',2);
 xlabel('Time (min)'); ylabel('Insulin (mU/L)');
 title('Linearized Insulin Concentration');
+sgtitle("Linearized Dynamics of Autonomous System");
 
 %% Nested Functions
 
 function dx = nonlinear_ode(t,x,p1,p2,p3,n,Gb,Ib,u_basal)
     G = x(1); X = x(2); I = x(3);
     
-    D_val = D_meal(t);
-    u = u_basal; 
+    u = 0; % no controller used for autonomous system   
     
-    dGdt = -p1*(G - Gb) - X*G + D_val;
+    dGdt = -p1*(G - Gb) - X*G ;
     dXdt = -p2*X + p3*(I - Ib);
     dIdt = -n*I + u;
     
     dx = [dGdt; dXdt; dIdt];
-end
-
-function D_val = D_meal(t)
-    % Adjust the number and spacing of meals:
-    % We want 4 meals over 24 hours (1440 min), so a meal every 360 minutes.
-    period = 360;       % interval between meals
-    meal_duration = 30; % duration of each meal spike
-    D_amplitude = 1;    % increase amplitude to emphasize spikes
-    
-    time_in_period = mod(t, period);
-    if time_in_period < meal_duration
-        D_val = D_amplitude;
-    else
-        D_val = 0;
-    end
 end
