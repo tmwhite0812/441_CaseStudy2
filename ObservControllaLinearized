@@ -1,25 +1,25 @@
+%% Tyler and Keeler Case Study 2 Controllability and Observability Checker
+
 function main()
     % Parameters
-    p1 = 0.03; % min^-1
-    p2 = 0.02; % min^-1
-    p3 = 0.01; % min^-1
-    n = 0.1;   % min^-1
-    Gb = 100;  % mg/dL
-    Ib = 10;   % mU/L
-
-    % Simplified Linearized System Matrix A
+    p1 = 0.03; 
+    p2 = 0.02; 
+    p3 = 0.01; 
+    n = 0.1;   
+    Gb = 100;  
+    Ib = 10;   
+    % Linearized System Matrix A
     A = [
         -p1, -Gb, 0;
         0, -p2, p3;
         0, 0, -n
     ];
 
-    % Input and Output Matrices
-    B = [0; 0; 1]; % Example input matrix (adjust as needed)
-    C = [1, 0, 0]; % Output matrix
+    % Input Output Matrices
+    B = [0; 0; 1]; 
+    C = [1, 0, 0]; 
 
-    % Display the Simplified Linearized System Matrix
-    disp("Simplified Linearized System Matrix A:");
+    disp("Linearized System Matrix A:");
     disp(A);
 
     % Check Controllability
@@ -31,8 +31,9 @@ function main()
     observability(A, C);
 end
 
+%% Functions for checkers
+%verify full rank of obs and contr matrix constructions
 function controllability(A, B)
-    % Compute controllability matrix
     ctrl_mtrx = [B, A * B, A^2 * B];
     rank_controllability = rank(ctrl_mtrx);
     disp(rank_controllability);
@@ -45,7 +46,6 @@ function controllability(A, B)
 end
 
 function observability(A, C)
-    % Compute observability matrix
     obs_mtrx = [C; C * A; C * A^2];
     rank_observability = rank(obs_mtrx);
     disp(rank_observability);
