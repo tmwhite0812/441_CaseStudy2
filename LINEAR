@@ -77,31 +77,30 @@ for i = 1:length(p1_values)
 
             %% Plot Results for Different Disturbances
             figure('Name', sprintf('Parameter Set %d: p1=%.4f, p2=%.4f, p3=%.4f', param_set, p1, p2, p3));
-            sgtitle("Linearized Control System Robustness Check")
+            sgtitle("Linearized Control System Robustness Check", 'fontsize', 20)
             
             subplot(4, 3, 1);
             plot(time_sin, G_sin, 'b', 'LineWidth', 2);
-            ylabel("Glucose (mg/dL)");
-            title("D(t): Mod Sine Wave");
-
+            title("D(t): Mod Sine Wave", 'fontsize', 20);
+            legend('Glucose Response(mg/dL)', 'fontsize', 20);  % Add legend here
             
             subplot(4, 3, 4);
             plot(time_sin, X_sin, 'LineWidth', 2);
-            ylabel('Insulin Action (1/min)');
+            legend('Insulin Action(/min)', 'fontsize', 20 );  % Add legend here
             
             subplot(4, 3, 7);
             plot(time_sin, I_sin, 'r', 'LineWidth', 2);
-            ylabel('Plasma Insulin Action (mU/L)');
+            legend('Plasma Insulin Action (mU/L)', 'fontsize', 20 );  % Add legend here
 
             subplot(4, 3, 10);
             plot(time_sin, D_sin_signal, 'g', 'LineWidth', 2);
-            ylabel('Exogenous Glucose (mg/dL/min)');
+            legend('Exogenous Glucose (mg/dL/min)', 'fontsize', 20 );  % Add legend here
 
             
             
             subplot(4, 3, 2);
             plot(time_square, G_square, 'b', 'LineWidth', 2);
-            title("D(t): Square Wave");
+            title("D(t): Square Wave", 'fontsize', 20);
 
             
             subplot(4, 3, 5);
@@ -117,7 +116,7 @@ for i = 1:length(p1_values)
 
             subplot(4, 3, 3);
             plot(time_random, G_random, 'b', 'LineWidth', 2);
-            title("D(t): Random Input");
+            title("D(t): Random Input", 'fontsize', 20);
 
             
             subplot(4, 3, 6);
