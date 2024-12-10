@@ -103,6 +103,60 @@ plot(time,u,'k','LineWidth',2);
 xlabel('Time (min)'); ylabel('u(t) (mU/min)');
 title('Control Input (Insulin Infusion Rate)');
 
+%% Form Augmented System Matrices for Transfer Function
+% Augment matrices to form the full state-space representation
+A_aug = [A - B*K,        zeros(3,3);
+         L*C,   A - B*K - L*C];
+
+E_aug = [E; zeros(3,1)];
+C_aug = [C, zeros(1,3)];
+
+% Verify dimensions of augmented matrices
+disp('Size of A_aug:'), disp(size(A_aug));
+disp('Size of E_aug:'), disp(size(E_aug));
+disp('Size of C_aug:'), disp(size(C_aug));
+
+% Symbolic Transfer Function from D(t) to y(t) - Gb
+syms s
+A_aug_sym = sym(A_aug);
+E_aug_sym = sym(E_aug);
+C_aug_sym = sym(C_aug);
+
+I_aug = eye(size(A_aug));  % Identity matrix
+sI_aug = s * I_aug;
+
+% Compute symbolic transfer function
+inv_term = inv(sI_aug - A_aug_sym);  % (sI - A_aug)^(-1)
+G_tf_sym = simplify(C_aug_sym * inv_term * E_aug_sym);
+
+disp('Symbolic Transfer Function from D(t) to y(t)-Gb:');
+pretty(G_tf_sym);  % Display symbolic transfer function in readable format
+
+% For numeric analysis, convert to state-space object and display:
+sys_aug = ss(A_aug, E_aug, C_aug, 0);
+G_tf = tf(sys_aug);
+
+disp('Numeric Transfer Function from D(t) to y(t)-Gb:');
+G_tf
+
+
+% State-space object for disturbance to output deviation (y-Gb)
+sys = ss(A_aug, E_aug, C_aug, 0);  % D-matrix = 0
+
+% Convert to transfer function:
+G_tf = tf(sys);
+
+figure;
+bode(G_tf); % Plot the Bode diagram for the transfer function G_tf
+grid on;    % Add grid for better visualization
+title('Bode Plot of the System');
+
+% Nyquist Plot
+figure;
+nyquist(G_tf); % Plot the Nyquist diagram for the transfer function G_tf
+grid on;       % Add grid for better visualization
+title('Nyquist Plot of the System');
+
 
 %% Nested Functions
 function dz = nonlinear_closed_loop_ode(t,z,p1,p2,p3,n,Gb,Ib,u_basal,A,B,C,K,L,D_func)
