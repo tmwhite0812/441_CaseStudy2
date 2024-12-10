@@ -1,0 +1,263 @@
+%% Tyler White and Keeler Tardiff Case Study 2
+%% Glucose-Insulin Dynamics: State Feedback with Luenberger Observer
+%% Nonlinear simulations and robustness check
+clear; clc; close all;
+
+%given parameters
+p1_values = [0.0255, 0.03, 0.0345]; 
+p2_values = [0.017, 0.02, 0.023]; 
+p3_values = [0.0085, 0.01, 0.0115]; 
+n = 0.1; % 1/min
+Gb = 100; % mg/dL (baseline glucose)
+Ib = 10; % mU/L (baseline insulin)
+
+% Basal insulin infusion to keep I=Ib at steady state
+u_basal = n * Ib;
+
+%% Equilibrium Analysis:
+% At equilibrium: G=Gb, X=0, I=Ib, D=0, and u = u_basal.
+% Define state vector deviations: x = [G - Gb; X; I - Ib]
+
+%% Linearized State-Space Model:
+% Inputs: Δu = u - u_basal, Disturbance: D(t)
+B = [0; 0; 1]; % Input affects I (and thus x3)
+E = [1; 0; 0]; % Disturbance input affects G-equation
+C = [1 0 0]; % Output y = G = Gb + x1
+
+% Simulation parameters
+tfinal = 1440; % 24 hours in minutes
+tspan = [0 tfinal];
+
+% Initial states:
+x0 = [Gb; 0; Ib]; % start at equilibrium (x1=0, x2=0, x3=0)
+xhat0 = [0; 0; 0]; % observer starts with no initial state knowledge error
+z0 = [x0; xhat0]; % Augmented state: z = [x; x_hat], dimension 6
+
+%% Desired Poles
+desired_poles_controller = [-0.05; -0.06; -0.08];
+desired_poles_observer = [-0.1; -0.12; -0.15];
+
+%% Parameter Testing Loop
+
+D_random = create_D_random(tfinal);
+
+param_set = 1;
+
+for i = 1:length(p1_values)
+    for j = 1:length(p2_values)
+        for k = 1:length(p3_values)
+
+            % Set parameters
+            p1 = p1_values(i);
+            p2 = p2_values(j);
+            p3 = p3_values(k);
+
+            % Update A matrix
+            A = [-p1, -Gb, 0;
+                 0, -p2, p3;
+                 0, 0, -n];
+
+            % Design K and L matrices for control and observer
+            K = place(A, B, desired_poles_controller);
+            L = place(A', C', desired_poles_observer)';
+
+            % Solve the nonlinear closed-loop system
+            [time_sin, Z_sin] = ode45(@(t, z) nonlinear_closed_loop_ode(t, z, p1, p2, p3, n, Gb, Ib, u_basal, A, B, C, K, L, @D_sin), tspan, z0);
+            [time_square, Z_square] = ode45(@(t, z) nonlinear_closed_loop_ode(t, z, p1, p2, p3, n, Gb, Ib, u_basal, A, B, C, K, L, @D_square), tspan, z0);
+            [time_random, Z_random] = ode45(@(t, z) nonlinear_closed_loop_ode(t, z, p1, p2, p3, n, Gb, Ib, u_basal, A, B, C, K, L, D_random), tspan, z0);
+
+
+            % Extract states and observer estimates
+            G_sin = Z_sin(:, 1); % Glucose (add baseline Gb)
+            X_sin = Z_sin(:, 2); % Insulin action (X)
+            I_sin = Z_sin(:, 3); % Insulin concentration (add baseline Ib)
+            xhat_sin = Z_sin(:, 4:6); % Observer states: [xhat1; xhat2; xhat3]
+            U_sin = u_basal -(K*xhat_sin')';
+            D_sin_signal = arrayfun(@D_sin, time_sin);
+
+            % Extract states and observer estimates
+            G_square = Z_square(:, 1); % Glucose (add baseline Gb)
+            X_square = Z_square(:, 2); % Insulin action (X)
+            I_square = Z_square(:, 3); % Insulin concentration (add baseline Ib)
+            xhat_square = Z_square(:, 4:6); % Observer states: [xhat1; xhat2; xhat3]
+            U_square = u_basal -(K*xhat_square')';
+            D_square_signal = arrayfun(@D_square, time_square);
+
+
+            % Extract states and observer estimates
+            G_random = Z_random(:, 1); % Glucose (add baseline Gb)
+            X_random = Z_random(:, 2); % Insulin action (X)
+            I_random = Z_random(:, 3); % Insulin concentration (add baseline Ib)
+            xhat_random = Z_random(:, 4:6); % Observer states: [xhat1; xhat2; xhat3]
+            U_random = u_basal -(K*xhat_random')';
+            D_random_signal = arrayfun(D_random, time_random);
+
+
+
+            % Plot results for this parameter set
+            figure('Name', sprintf('Parameter Set %d: p1=%.4f, p2=%.4f, p3=%.4f', param_set, p1, p2, p3));
+            sgtitle("Nonlinear Control System Robustness Check")
+            % Glucose response
+            subplot(4, 3, 1);
+            plot(time_sin, G_sin, 'b', 'LineWidth', 2);
+            ylabel("Glucose (mg/dL)");
+            title("D(t): Mod Sine Wave");
+
+
+            % Insulin action
+            subplot(4, 3, 4);
+            plot(time_sin, X_sin, 'b', 'LineWidth', 2);
+            ylabel('Insulin Action (1/min)');
+
+
+            % Control input
+            subplot(4, 3, 7);
+            plot(time_sin, I_sin, 'k', 'LineWidth', 2);
+            ylabel('Plasma Insulin Action (mU/L)');
+
+
+            subplot(4, 3, 10);
+            plot(time_sin, D_sin_signal, 'g', 'LineWidth', 2);
+            ylabel('Exogenous Glucose (mg/dL/min)');
+ 
+
+            % Glucose response
+            subplot(4, 3, 2);
+            plot(time_square, G_square, 'b', 'LineWidth', 2);
+            title("D(t): Square Wave");
+
+
+
+            % Insulin action
+            subplot(4, 3, 5);
+            plot(time_square, X_square, 'b', 'LineWidth', 2);
+
+
+            % Control input
+            subplot(4, 3, 8);
+            plot(time_square, I_square, 'k', 'LineWidth', 2);
+
+
+            subplot(4, 3, 11);
+            plot(time_square, D_square_signal, 'g', 'LineWidth', 2);
+            
+            % Glucose response
+            subplot(4, 3, 3);
+            plot(time_random, G_random, 'b', 'LineWidth', 2);
+            title("D(t): Random Input");
+
+
+            % Insulin action
+            subplot(4, 3, 6);
+            plot(time_random, X_random, 'b', 'LineWidth', 2);
+
+
+            % Control input
+            subplot(4, 3, 9);
+            plot(time_random, I_random, 'k', 'LineWidth', 2);
+
+
+            subplot(4, 3, 12);
+            plot(time_random, D_random_signal, 'g', 'LineWidth', 2);
+
+
+            % Increment parameter set index
+            param_set = param_set + 1;
+
+            han = axes('Visible', 'off'); % Create an invisible axis for labels
+            han.Title.Visible = 'on';
+            han.XLabel.Visible = 'on';
+            han.YLabel.Visible = 'on';
+
+            xlabel(han, 'Time (min)');
+
+        end
+    end
+end
+
+%% Nested Functions
+function dz = nonlinear_closed_loop_ode(t,z,p1,p2,p3,n,Gb,Ib,u_basal,A,B,C,K,L,D_func)
+    % z = [G; X; I; xhat1; xhat2; xhat3]
+
+    G = z(1);
+    X = z(2);
+    I = z(3);
+    xhat = z(4:6);
+
+    % Disturbance
+    D_val = D_func(t);
+
+    % Output
+    y = G; % measured output is glucose directly
+
+    % Compute control input from observer
+    u_pid = -K*xhat;
+    u = u_basal + u_pid;
+
+    % Nonlinear plant dynamics
+    dGdt = -p1*(G - Gb) - X*G + D_val;
+    dXdt = -p2*X + p3*(I - Ib);
+    dIdt = -n*I + u;
+
+    dx = [dGdt; dXdt; dIdt];
+
+    % Observer dynamics
+    % Observer is linear and uses deviations x = [G-Gb; X; I-Ib]
+    % Let's define:
+    x_dev = [G - Gb; X; I - Ib];
+    y_dev = y - Gb; % y = G, so y_dev = G-Gb
+
+    dxhat = A*xhat + B*(u - u_basal) + L*(y_dev - (C*xhat));
+
+    dz = [dx; dxhat];
+end
+
+function D_val = D_sin(t)
+    % A simple meal disturbance every 240 min lasting 30 min
+    period = 360;
+    meal_duration = 30;
+    D_amplitude = 2; % Smaller amplitude for demonstration
+    time_in_period = mod(t, period);
+    if time_in_period < meal_duration
+       D_val = D_amplitude * sin(pi * time_in_period / meal_duration)^2;
+    else
+        D_val = 0;
+    end
+end
+
+function D_val = D_square(t)
+    % A square wave meal disturbance every 360 min lasting 30 min
+    period = 360; % Time between meals
+    meal_duration = 30; % Duration of the disturbance
+    D_amplitude = 2; % Amplitude of the disturbance
+    time_in_period = mod(t, period); % Time within the current period
+    if time_in_period < meal_duration
+        D_val = D_amplitude;
+    else
+        D_val = 0; % No disturbance outside meal duration
+    end
+end
+
+
+function D_func = create_D_random(tfinal)
+    % Predefine random disturbances
+    num_disturbances = randi([1, 10]); % Random number of disturbances (1 to 10)
+    amplitudes = 2 * rand(1, num_disturbances); % Random amplitudes (0 to 2)
+    start_times = sort(rand(1, num_disturbances) * tfinal); % Random start times, sorted
+    durations = randi([10, 60], 1, num_disturbances); % Random durations (10 to 60 min)
+    
+    % Define the disturbance function
+    D_func = @(t) compute_disturbance(t, start_times, durations, amplitudes);
+end
+
+function D_val = compute_disturbance(t, start_times, durations, amplitudes)
+    % Compute the disturbance value at time t
+    D_val = 0;
+    for i = 1:length(start_times)
+        if t >= start_times(i) && t < start_times(i) + durations(i)
+            D_val = amplitudes(i);
+            break; % Only one disturbance active at a time
+        end
+    end
+end
+
