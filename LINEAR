@@ -80,6 +80,20 @@ TF_sym = simplify(C_aug_sym * inv(s * I_sym - A_aug_sym) * E_aug_sym);
 disp('Symbolic Transfer Function (TF_sym):');
 pretty(TF_sym);
 
+% Gain Margin and Phase marrgin calculations 
+[gm, pm, wcg, wcp] = margin(G_tf);
+
+% Display Results
+disp('Gain Margin (gm):');
+disp(20*log10(gm)); % Convert GM from abs to dB
+disp('Phase Margin (pm):');
+disp(pm); % Phase margin in degrees
+disp('Gain Crossover Frequency (wcg):');
+disp(wcg); % Frequency where gain margin is measured
+disp('Phase Crossover Frequency (wcp):');
+disp(wcp); % Frequency where phase margin is measured
+
+
 %% Parameter Testing Loop
 param_set = 1;
 
