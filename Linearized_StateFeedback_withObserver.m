@@ -120,6 +120,47 @@ plot(time,U,'k','LineWidth',2);
 xlabel('Time (min)'); ylabel('u(t) (mU/min)');
 title('Control Input (Insulin Infusion Rate)');
 
+%% Transfer Function Analysis
+% Augmented Matrices
+A_aug = [A - B*K, zeros(3, 3);
+         L*C, A - B*K - L*C];
+E_aug = [E; zeros(3, 1)];
+C_aug = [C, zeros(1, 3)];
+
+% Numeric Transfer Function
+sys = ss(A_aug, E_aug, C_aug, 0);
+G_tf = tf(sys);
+
+% Display numeric transfer function
+disp('Numeric Transfer Function (G_tf):');
+G_tf
+
+% Bode Plot
+figure;
+bode(G_tf);
+grid on;
+title('Bode Plot of the System');
+
+% Nyquist Plot
+figure;
+nyquist(G_tf);
+grid on;
+title('Nyquist Plot of the System');
+
+%% Symbolic Transfer Function
+syms s
+A_aug_sym = sym(A_aug);
+E_aug_sym = sym(E_aug);
+C_aug_sym = sym(C_aug);
+I_sym = eye(size(A_aug_sym));
+
+% Compute symbolic transfer function
+TF_sym = simplify(C_aug_sym * inv(s * I_sym - A_aug_sym) * E_aug_sym);
+
+% Display symbolic transfer function
+disp('Symbolic Transfer Function (TF_sym):');
+pretty(TF_sym);
+
 
 
 %% Nested Functions
