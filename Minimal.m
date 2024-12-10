@@ -1,13 +1,14 @@
-%% Check Minimality of Transfer Function
+%% Tyler and Keeler Case Study 2
+%% Script to Check Minimality of Transfer Function
 clear; clc; close all;
 
-% Given Parameters
-p1 = 0.03; % Middle value of p1
-p2 = 0.02; % Middle value of p2
-p3 = 0.01; % Middle value of p3
-n = 0.1;   % Fixed value
-Gb = 100;  % Baseline glucose (mg/dL)
-Ib = 10;   % Baseline insulin (mU/L)
+%all base values
+p1 = 0.03; 
+p2 = 0.02; 
+p3 = 0.01; 
+n = 0.1;  
+Gb = 100;  
+Ib = 10;   
 
 % Linearized Matrices
 A = [-p1, -Gb, 0;
@@ -21,7 +22,7 @@ C = [1, 0, 0];
 desired_poles_controller = [-0.05; -0.06; -0.08];
 desired_poles_observer = [-0.1; -0.12; -0.15];
 
-% Gains
+% pole placement
 K = place(A, B, desired_poles_controller);
 L = place(A', C', desired_poles_observer)';
 
@@ -35,7 +36,6 @@ C_aug = [C, zeros(1, 3)];
 sys_aug = ss(A_aug, E_aug, C_aug, 0);
 G_tf = tf(sys_aug);
 
-% Display Transfer Function
 disp('Transfer Function (Numeric):');
 disp(G_tf);
 
@@ -47,12 +47,12 @@ disp('Zeros of the Transfer Function:');
 disp(z);
 
 % Check for Pole-Zero Cancellations
-tolerance = 1e-6; % Tolerance for numerical comparison
+tolerance = 1e-6; % tolerance for decimal points on p/z
 cancellations = [];
 for i = 1:length(p)
     for j = 1:length(z)
         if abs(p(i) - z(j)) < tolerance
-            cancellations = [cancellations; p(i)]; %#ok<AGROW>
+            cancellations = [cancellations; p(i)]; 
         end
     end
 end
